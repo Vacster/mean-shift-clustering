@@ -3,8 +3,8 @@
  * Reference: https://en.wikipedia.org/wiki/Mean_shift
  */
 
-#define AREA_RADIUS 1.0f
-#define KERNEL_BANDWIDTH 0.35f
+#define AREA_RADIUS 0.5
+#define KERNEL_BANDWIDTH 0.35
 
 #include <utility>
 #include <cmath>
@@ -13,36 +13,21 @@
 using namespace std;
 namespace plt = matplotlibcpp;
 
-typedef vector<float> Coord;
+typedef vector<double> Coord;
 typedef vector<Coord> Grid;
 
-Grid *N(Coord center, Grid &points);
-bool inside_circle(Coord p1, Coord p2, float radius);
-float squared_euclidean_distance(Coord p1, Coord p2);
-float gaussian_kernel(float x, float bandwidth);
+Grid *get_neighbors(Coord center, Grid &points);
+Grid &grid_from_file(int dimensions = 2);
+bool inside_circle(Coord p1, Coord p2, double radius);
+double squared_euclidean_distance(Coord p1, Coord p2);
+double gaussian_kernel(double x, double bandwidth);
 Coord mean_shift(Coord x, Grid &points);
 
 int main(int argc, char *argv[])
 {
-    Grid grid;
-
-    for (int z = 0; z < 5; z++)
-        for (int zz = 0; zz < 5; zz++)
-        {
-            vector<float> x;
-            x.push_back(z);
-            x.push_back(zz);
-            grid.push_back(x);
-        }
-
-    for (float z = 0.0f; z < 2.0f; z += 0.2f)
-        for (float zz = 0.0f; zz < 2.0f; zz += 0.2f)
-        {
-            vector<float> x;
-            x.push_back(z);
-            x.push_back(zz);
-            grid.push_back(x);
-        }
+    Grid &grid = grid_from_file();
+    Grid test_points_grid;
+    Grid final_position_grid;
 
     Coord test;
     test.push_back(2.0f);
@@ -51,10 +36,20 @@ int main(int argc, char *argv[])
     for (int z = 0; z < 50; z++)
     {
         test = mean_shift(test, grid);
-        cout << test[0] << '\t' << test[1] << endl;
+        test_points_grid.push_back(Coord(test));
     }
-    
+    final_position_grid.push_back(Coord(test));
+    cout << test[0] << '\t' << test[1] << endl;
+
+    map<string, string> kwargs;
+    kwargs["color"] = "red";
+    kwargs["s"] = "100";
+    kwargs["facecolors"] = "none";
     plt::scatter(grid);
+    plt::scatter(test_points_grid, kwargs);
+    kwargs["color"] = "green";
+    kwargs["s"] = "150";
+    plt::scatter(final_position_grid, kwargs);
     plt::show();
 }
 
@@ -64,7 +59,7 @@ int main(int argc, char *argv[])
  * Returns a Grid* object with the neighbors. 
  * It's the responsibility of the user to free the returned Grid.
  */
-Grid *N(Coord center, Grid &points) 
+Grid *get_neighbors(Coord center, Grid &points) 
 {
     Grid *neighbors = new Grid();
 
@@ -75,29 +70,48 @@ Grid *N(Coord center, Grid &points)
     return neighbors;
 }
 
+Grid &grid_from_file(int dimensions)
+{
+    Grid *grid = new Grid();
+
+    double curr;
+    while (!cin.eof())
+    {
+        Coord coord;
+        for (int x = 0; x < dimensions; x++)
+        {
+            cin >> curr;
+            coord.push_back(curr);
+        }
+        grid->push_back(coord);
+    }
+
+    return *grid;
+}
+
 /*
  * @param p1 Point to compare to
  * @param p2 Center of circle
  * @param radius Radius of circle
  * The "circle" is actually an N-dimensional sphere
  */
-bool inside_circle(Coord p1, Coord p2, float radius) 
+bool inside_circle(Coord p1, Coord p2, double radius) 
 {
     assert(p1.size() == p2.size());
 
-    float radius_squared = radius * radius;
+    double radius_squared = radius * radius;
 
-    float distance = squared_euclidean_distance(p1, p2);
+    double distance = squared_euclidean_distance(p1, p2);
 
     return distance <= radius_squared;
 }
 
-float squared_euclidean_distance(Coord p1, Coord p2) 
+double squared_euclidean_distance(Coord p1, Coord p2) 
 {
     assert(p1.size() == p2.size());
 
     int dimension_size = p1.size();
-    float distance = 0, curr_distance;
+    double distance = 0, curr_distance;
 
     for (int x = 0; x < dimension_size; x++)
     {
@@ -109,16 +123,16 @@ float squared_euclidean_distance(Coord p1, Coord p2)
     return distance;
 }
 
-float gaussian_kernel(float x, float bandwidth) 
+double gaussian_kernel(double x, double bandwidth) 
 {
     return exp(x / (2 * (bandwidth * bandwidth)));
 }
 
 Coord mean_shift(Coord x, Grid &points) {
-    Grid *neighbors = N(x, points);
+    Grid *neighbors = get_neighbors(x, points);
 
     int numerator_size = x.size();
-    float denominator = 0;
+    double denominator = 0;
     Coord numerator;
 
     for (int i = 0; i < numerator_size; i++)
@@ -126,8 +140,8 @@ Coord mean_shift(Coord x, Grid &points) {
 
     for (Coord x_i : *neighbors) 
     {
-        float distance = squared_euclidean_distance(x, x_i);
-        float weight = gaussian_kernel(distance, KERNEL_BANDWIDTH);
+        double distance = squared_euclidean_distance(x, x_i);
+        double weight = gaussian_kernel(distance, KERNEL_BANDWIDTH);
 
         for (int p = 0; p < numerator_size; p++)
             numerator[p] += (weight * x_i[p]);
@@ -138,5 +152,6 @@ Coord mean_shift(Coord x, Grid &points) {
     for (int i = 0; i < numerator_size; i++)
         numerator[i] /= denominator;
 
+    free(neighbors);
     return numerator;
 }

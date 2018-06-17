@@ -345,7 +345,6 @@ template<typename Numeric>
 bool scatter(const std::vector<std::vector<Numeric>>& grid, const std::map<std::string, std::string>& keywords = std::map<std::string, std::string>())
 {
     assert(!grid.empty());
-    assert(grid[0].size() == grid[1].size());
     assert(grid[0].size() == 2);
 
     std::vector<Numeric> x;
@@ -361,15 +360,28 @@ bool scatter(const std::vector<std::vector<Numeric>>& grid, const std::map<std::
     PyObject* xarray = get_array(x);
     PyObject* yarray = get_array(y);
 
-    // construct positional args
     PyObject* args = PyTuple_New(2);
     PyTuple_SetItem(args, 0, xarray);
     PyTuple_SetItem(args, 1, yarray);
 
-    // construct keyword args
     PyObject* kwargs = PyDict_New();
     for(std::map<std::string, std::string>::const_iterator it = keywords.begin(); it != keywords.end(); ++it)
-        PyDict_SetItemString(kwargs, it->first.c_str(), PyString_FromString(it->second.c_str()));
+    {
+        std::string s1 = it->first;
+        if (!s1.compare("s"))
+        {
+            std::string s2 = it->second;
+            char s2_c[s2.size() + 1];
+            strcpy(s2_c, s2.c_str());
+            PyObject *pyint = PyInt_FromString(s2_c, NULL, 10);
+            PyObject *pystring = PyString_FromString(s1.c_str());
+            PyDict_SetItem(kwargs, pystring, pyint);
+        } 
+        else 
+        {
+            PyDict_SetItemString(kwargs, s1.c_str(), PyString_FromString(it->second.c_str()));
+        }
+    }
 
     PyObject* res = PyObject_Call(detail::_interpreter::get().s_python_function_scatter, args, kwargs);
 
@@ -513,34 +525,6 @@ bool plot(const std::vector<NumericX>& x, const std::vector<NumericY>& y, const 
     PyTuple_SetItem(plot_args, 2, pystring);
 
     PyObject* res = PyObject_CallObject(detail::_interpreter::get().s_python_function_plot, plot_args);
-
-    Py_DECREF(plot_args);
-    if(res) Py_DECREF(res);
-
-    return res;
-}
-
-template<typename Numeric>
-bool scatter(const std::vector<std::pair<Numeric, Numeric>>& grid)
-{
-    std::vector<Numeric> x;
-    std::vector<Numeric> y;
-    for (auto it = std::make_move_iterator(grid.begin()),
-            end = std::make_move_iterator(grid.end()); it != end; ++it)
-    {
-        x.push_back(std::move(it->first));
-        y.push_back(std::move(it->second));
-    }
-
-    assert(x.size() == y.size());
-    PyObject* xarray = get_array(x);
-    PyObject* yarray = get_array(y);
-
-    PyObject* plot_args = PyTuple_New(2);
-    PyTuple_SetItem(plot_args, 0, xarray);
-    PyTuple_SetItem(plot_args, 1, yarray);
-
-    PyObject* res = PyObject_CallObject(detail::_interpreter::get().s_python_function_scatter, plot_args);
 
     Py_DECREF(plot_args);
     if(res) Py_DECREF(res);
