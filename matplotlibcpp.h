@@ -47,6 +47,7 @@ struct _interpreter {
     PyObject *s_python_function_legend;
     PyObject *s_python_function_xlim;
     PyObject *s_python_function_ion;
+    PyObject *s_python_function_ioff;
     PyObject *s_python_function_ylim;
     PyObject *s_python_function_title;
     PyObject *s_python_function_axis;
@@ -127,11 +128,10 @@ private:
         Py_DECREF(pyplotname);
         if (!pymod) { throw std::runtime_error("Error loading module matplotlib.pyplot!"); }
 
-
         PyObject* pylabmod = PyImport_Import(pylabname);
         Py_DECREF(pylabname);
-        if (!pylabmod) { throw std::runtime_error("Error loading module pylab!"); }
-
+        if (!pylabmod) { throw std::runtime_error("Error loading module pylab!"); }    
+        
         s_python_function_show = PyObject_GetAttrString(pymod, "show");
         s_python_function_close = PyObject_GetAttrString(pymod, "close");
         s_python_function_draw = PyObject_GetAttrString(pymod, "draw");
@@ -154,6 +154,7 @@ private:
         s_python_function_grid = PyObject_GetAttrString(pymod, "grid");
         s_python_function_xlim = PyObject_GetAttrString(pymod, "xlim");
         s_python_function_ion = PyObject_GetAttrString(pymod, "ion");
+        s_python_function_ioff = PyObject_GetAttrString(pymod, "ioff");
         s_python_function_save = PyObject_GetAttrString(pylabmod, "savefig");
         s_python_function_annotate = PyObject_GetAttrString(pymod,"annotate");
         s_python_function_clf = PyObject_GetAttrString(pymod, "clf");
@@ -183,6 +184,7 @@ private:
             || !s_python_function_grid
             || !s_python_function_xlim
             || !s_python_function_ion
+            || !s_python_function_ioff
             || !s_python_function_save
             || !s_python_function_clf
             || !s_python_function_annotate
@@ -215,6 +217,7 @@ private:
             || !PyFunction_Check(s_python_function_grid)
             || !PyFunction_Check(s_python_function_xlim)
             || !PyFunction_Check(s_python_function_ion)
+            || !PyFunction_Check(s_python_function_ioff)
             || !PyFunction_Check(s_python_function_save)
             || !PyFunction_Check(s_python_function_clf)
             || !PyFunction_Check(s_python_function_tight_layout)
@@ -1089,6 +1092,16 @@ inline void clf() {
         detail::_interpreter::get().s_python_empty_tuple);
 
     if (!res) throw std::runtime_error("Call to ion() failed.");
+
+    Py_DECREF(res);
+}
+
+    inline void ioff() {
+    PyObject *res = PyObject_CallObject(
+        detail::_interpreter::get().s_python_function_ioff,
+        detail::_interpreter::get().s_python_empty_tuple);
+
+    if (!res) throw std::runtime_error("Call to ioff() failed.");
 
     Py_DECREF(res);
 }
