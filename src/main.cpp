@@ -1,6 +1,6 @@
 #include <map>
-#include "matplotlibcpp.h"
-#include "mean_shift.h"
+#include "header/matplotlibcpp.h"
+#include "header/mean_shift.h"
 
 namespace plt = matplotlibcpp;
 using namespace std;

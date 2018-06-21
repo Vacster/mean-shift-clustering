@@ -1,5 +1,11 @@
 all:
-	g++ -o mean_shift.o mean_shift.cpp main.cpp -g --std=c++11 -I/usr/include/python2.7 -lpython2.7
+	g++ -o bin/mean_shift.o src/mean_shift.cpp src/main.cpp -g --std=c++11 -I/usr/include/python2.7 -lpython2.7
+
+tests:
+	g++ -o bin/mean_shift_test1.o src/mean_shift.cpp src/test/main.cpp src/test/test1.cpp -g --std=c++11 -I/usr/include/python2.7 -lpython2.7
+
+tests-visual:
+	g++ -o bin/mean_shift_test_visual1.o src/mean_shift.cpp src/test/main.cpp src/test/test1.cpp -g --std=c++11 -I/usr/include/python2.7 -lpython2.7 -DMS_VISUAL=true
 
 clean:
-	rm mean_shift.o
+	rm bin/mean_shift*.o

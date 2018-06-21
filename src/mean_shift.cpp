@@ -3,10 +3,14 @@
  * Reference: https://en.wikipedia.org/wiki/Mean_shift
  */
 
-#include "mean_shift.h"
-#include "matplotlibcpp.h"
+#include "header/mean_shift.h"
+#include "header/matplotlibcpp.h"
+#include <algorithm>
 
 using namespace std;
+
+double AREA_RADIUS;
+double KERNEL_BANDWIDTH;
 
 /*
  * @param center Checks for the neighbors of circle with center 'center'
@@ -32,11 +36,15 @@ Grid *get_neighbors(Coord center, Grid &points)
  *               the file, if it isn't specified then the default value is std::cin.
  * Creates a new Grid in heap, populates it from the stream and then returns a 
  * reference to it. It's up to the callee to free it.
+ * The file must be a CSV with each row being a different point and the first
+ * row representing the AREA_RADIUS and KERNEL_BANDWIDTH
  */
 Grid &grid_from_file(int dimensions, istream &stream)
 {
     Grid *grid = new Grid();
-
+    stream >> AREA_RADIUS;
+    stream >> KERNEL_BANDWIDTH;
+    
     double curr;
     while (!stream.eof())
     {
@@ -100,10 +108,9 @@ Coord mean_shift(Coord x, Grid &points) {
 
     int numerator_size = x.size();
     double denominator = 0;
-    Coord numerator;
+    Coord numerator(numerator_size);
 
-    for (int i = 0; i < numerator_size; i++)
-        numerator.push_back(0.0f);
+    fill(numerator.begin(), numerator.end(), 0.0f);
 
     for (Coord x_i : *neighbors) 
     {
@@ -116,9 +123,38 @@ Coord mean_shift(Coord x, Grid &points) {
         denominator += weight;
     }
 
-    for (int i = 0; i < numerator_size; i++)
-        numerator[i] /= denominator;
-
+    for (double &num_i : numerator)
+        num_i /= denominator;
+        
     free(neighbors);
     return numerator;
+}
+
+/*
+ * @param grid The grid to calculate the mins and max of
+ * Iterates over the whole grid looking for the min and max
+ * points of each component and returns them in a struct
+ */
+void get_grid_min_max(MinMaxData &data, Grid *grid)
+{
+    bool first = true;
+    for (Coord coord : *grid)
+    {
+        int index = 0;
+        for (auto it = coord.begin(); it != coord.end(); it++, index++)
+        {
+            if (first)
+            {
+                data.mins.push_back(numeric_limits<double>::max());
+                data.maxs.push_back(numeric_limits<double>::lowest());
+            }
+
+            if (*it < data.mins[index])
+                data.mins[index] = *it;
+
+            if (*it > data.maxs[index])
+                data.maxs[index] = *it;
+        }
+        first = false;
+    }
 }
