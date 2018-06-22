@@ -8,7 +8,6 @@
 namespace plt = matplotlibcpp;
 #endif
 
-
 bool double_equals(double a, double b, double epsilon = 0.001)
 {
     double diff = (a - b);
@@ -32,7 +31,7 @@ TEST_CASE( "Dataset1", "[mean_shift]" )
             {
                 std::istream is(&fb);
                 grid = &grid_from_file(2, is);
-                
+
                 THEN("The grid is populated") 
                 {
                     REQUIRE( grid->size() == 400 );
