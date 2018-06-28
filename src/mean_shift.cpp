@@ -7,6 +7,10 @@
 #include "header/matplotlibcpp.h"
 #include <algorithm>
 
+#ifdef OMP
+#include <omp.h>
+#endif
+
 using namespace std;
 
 double AREA_RADIUS;
@@ -18,15 +22,22 @@ double KERNEL_BANDWIDTH;
  * Returns a Grid* object with the neighbors. 
  * It's the responsibility of the user to free the returned Grid.
  */
-Grid *get_neighbors(Coord center, Grid &points) 
+void get_neighbors(Coord center, Grid &points, Grid &neighbors) 
 {
-    Grid *neighbors = new Grid();
-
-    for (Coord p : points) 
-        if (inside_circle(center, p, AREA_RADIUS))
-            neighbors->push_back(p);
-
-    return neighbors;
+#ifdef OMP
+    int points_size = points.size();
+#pragma omp declare reduction (merge : Grid : omp_out.insert(omp_out.end(), omp_in.begin(), omp_in.end()))
+#pragma omp parallel for reduction(merge: neighbors) num_threads(4)
+    for (int x = 0; x < points_size; x++) {
+        if (inside_circle(center, points[x], AREA_RADIUS)) {
+            neighbors.push_back(points[x]);
+        }
+    }
+#else
+    for (Coord coord : points)
+        if (inside_circle(center, coord, AREA_RADIUS))
+            neighbors.push_back(coord);
+#endif
 }
 
 /*
@@ -104,16 +115,36 @@ double squared_euclidean_distance(Coord p1, Coord p2)
  * https://en.wikipedia.org/wiki/Mean_shift
  */
 Coord mean_shift(Coord x, Grid &points) {
-    Grid *neighbors = get_neighbors(x, points);
+    Grid neighbors;
+    get_neighbors(x, points, neighbors);
 
     int numerator_size = x.size();
     double denominator = 0;
-    Coord numerator(numerator_size);
+    Coord numerator(numerator_size, 0.0);
+    if (neighbors.size() == 0)
+        return numerator;
 
-    fill(numerator.begin(), numerator.end(), 0.0f);
-
-    for (Coord x_i : *neighbors) 
+#ifdef OMP 
+    int neighbors_size = neighbors.size();
+#pragma omp parallel for reduction(+:denominator) num_threads(4)
+    for (int it = 0; it < neighbors_size; ++it) 
     {
+        Coord x_i = neighbors[it];
+        double distance = squared_euclidean_distance(x, x_i);
+        double weight = gaussian_kernel(distance, KERNEL_BANDWIDTH);
+
+        for (int p = 0; p < numerator_size; p++)
+        {
+            #pragma omp atomic
+            numerator[p] += (weight * x_i[p]);
+        }
+
+        denominator += weight;
+    }
+#else
+    for (vector<Coord>::iterator it = neighbors.begin(); it != neighbors.end(); ++it) 
+    {
+        Coord x_i = *it;
         double distance = squared_euclidean_distance(x, x_i);
         double weight = gaussian_kernel(distance, KERNEL_BANDWIDTH);
 
@@ -122,11 +153,11 @@ Coord mean_shift(Coord x, Grid &points) {
 
         denominator += weight;
     }
+#endif
 
     for (double &num_i : numerator)
         num_i /= denominator;
-        
-    free(neighbors);
+
     return numerator;
 }
 

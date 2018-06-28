@@ -37,7 +37,7 @@ int main(int argc, char *argv[])
         plt::scatter(grid);
         plt::scatter(test_points_grid, kwargs);
         plt::draw();
-        plt::pause(0.001);
+        plt::pause(0.0001);
     }
     plt::ioff();
     plt::show();

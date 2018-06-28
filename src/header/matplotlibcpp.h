@@ -347,9 +347,6 @@ bool plot(const std::vector<Numeric> &x, const std::vector<Numeric> &y, const st
 template<typename Numeric>
 bool scatter(const std::vector<std::vector<Numeric>>& grid, const std::map<std::string, std::string>& keywords = std::map<std::string, std::string>())
 {
-    assert(!grid.empty());
-    assert(grid[0].size() == 2);
-
     std::vector<Numeric> x;
     std::vector<Numeric> y;
     

@@ -11,7 +11,7 @@ struct MinMaxData {
     std::vector<double> maxs;
 };
 
-Grid *get_neighbors(Coord center, Grid &points);
+void get_neighbors(Coord center, Grid &points, Grid &neighbors);
 Grid &grid_from_file(int dimensions = 2, std::istream &stream = std::cin);
 Coord mean_shift(Coord x, Grid &points);
 bool inside_circle(Coord p1, Coord p2, double radius);
